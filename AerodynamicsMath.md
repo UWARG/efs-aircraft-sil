@@ -39,7 +39,7 @@ Note that the mean chord length, wingspan and wing area were scaled by the RV-12
 |---|---|---|---|
 | M | Mach number | 50 | – |
 | $\alpha_0$ | Initial angle of attack	| 0.47 | Degrees |
-| e | Oswald efficiency factor | 0.9 | – |
+| e_{os} | Oswald efficiency factor | 0.9 | – |
 
 ## Longitudinal Aerodynamics
 Variables:
@@ -89,7 +89,11 @@ $$ \begin{pmatrix} F_{lift_{longitudinal}}^b \\ F_{drag_{longitudinal}}^b\end{pm
 
 ### Pitching Moment
 <p align="center">
-$$C_{m}(\alpha) = C_{m_0} + (C_{m_\alpha}*\alpha)$$
+$$M_m = \frac{1}{2} \rho V_a^2Sc * [C_{m}(\alpha) + C_{m_q}\frac{c}{2V_a}q + C_{m_{{\delta}_e}}\delta_e]$$
+</p>
+
+<p align="center">
+$$C_{m}(\alpha) = C_{m_0} + (C_{m_\alpha}\alpha)$$
 </p>
 
 ##### Longitudinal Coefficients of the Aerosonde for Moment Calculations
