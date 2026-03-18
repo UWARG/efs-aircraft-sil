@@ -7,49 +7,46 @@ Formulas from the SIL document are implemented in the `matlab/` folder:
 
 | File | Description |
 |------|-------------|
-| `thrust_formula.m` | Thrust T = (1/2)ρAv²C_T |
-| `thrust_coefficient.m` | C_T = k₁(v/v_tip) + k₂(v/v_tip)² |
+| `advanced_ratio.m` | Advance ratio J = 2πV_a/(Ω_p·D) |
+| `thrust_formula.m` | Thrust T_p = (ρD⁴/(4π²))·Ω_p²·C_T |
+| `torque_formula.m` | Torque Q_p = (ρD⁵/(4π²))·Ω_p²·C_Q |
+| `thrust_coefficient_from_J.m` | C_T from J (e.g. k₁J + k₂J²) |
+| `torque_coefficient_from_J.m` | C_Q from J (e.g. k₁J + k₂J²) |
+| `thrust_coefficient.m` | C_T from v/v_tip (uses J internally) |
 | `lift_formula.m` | Lift L = (1/2)ρv²S·C_L |
 | `drag_formula.m` | Drag D = (1/2)ρv²S·C_D |
 | `pid_attitude.m` | PID: u = Kp·e + Ki·∫e + Kd·de/dt |
 | `pid_ziegler_nichols.m` | Ziegler–Nichols initial gains from Ku, Tu |
 | `run_sil_demo.m` | Demo script (thrust, aero, PID + plots) |
-| `build_sil_simulink.m` | Creates SIL_Formulas.slx with Thrust/Lift/Drag/PID subsystems |
+| `build_sil_simulink.m` | Creates SIL_Formulas.slx with Thrust/Torque/Lift/Drag/PID subsystems |
 | `sil_set_matlab_function_code.m` | Fills MATLAB Function block code in SIL_Formulas |
 | `SIL_Simulink_Block_Code.m` | Code to paste into each MATLAB Function block (if needed) |
 
-**Run demo:** In MATLAB, `cd` to project root, then `run('matlab/run_sil_demo')` or add `matlab` to path and run `run_sil_demo`.
 
-### Simulink (SIL blocks)
+### Wiring reference
 
-1. In MATLAB (project root): `run('matlab/build_sil_simulink')`
-2. This creates **SIL_Formulas.slx** with subsystems: **Thrust_SIL**, **Lift_SIL**, **Drag_SIL**, **PID_Attitude_SIL** (each with a MATLAB Function block implementing the formula).
-3. Copy these subsystems into **AM_SITL.slx**, or use **Model Reference** to reference `SIL_Formulas`.
-4. If the script does not fill the MATLAB Function block code automatically, paste from **matlab/SIL_Simulink_Block_Code.m** into each block (ThrustFcn, LiftFcn, DragFcn, PIDFcn).
+**Thrust_SIL / Torque_SIL inputs:**
 
-### How to add formulas into AM_SITL
+| Input | Meaning | Suggested source |
+|-------|---------|------------------|
+| **rho** | Air density (kg/m³) | **Constant**, e.g. 1.225 |
+| **D** | Propeller diameter (m) | **Constant**, e.g. 0.3 |
+| **Omega_p** | Propeller angular velocity (rad/s) | Motor/ESC or throttle model, or **Constant** for testing |
+| **Va** | Airspeed (m/s) | From Rigid Body velocities: **sqrt(u²+v²+w²)**, or **Constant** for testing |
+| **k1, k2** | C_T / C_Q coefficients | **Constant** (e.g. 0.1, 0.02) |
 
-1. **Open both models**  
-   In MATLAB, open `SIL_Formulas.slx` first, then `AM_SITL.slx` (or open only AM_SITL and drag in from Library Browser or from file).
+**Where the formula outputs go:**
 
-2. **Drag subsystems into AM_SITL**  
-   - In **SIL_Formulas**, select the subsystem **Thrust_SIL** (or Lift_SIL, Drag_SIL, PID_Attitude_SIL), `Ctrl+C` to copy.  
-   - Switch to the **AM_SITL** canvas, click in the blank area between “Total External Forces” and “Rigid Body Dynamics” on the left, `Ctrl+V` to paste.  
-   - In the same way you can paste **Lift_SIL**, **Drag_SIL** (and **PID_Attitude_SIL** when needed).
+| Output | Connect to | Notes |
+|--------|------------|-------|
+| **T_p** (thrust) | **Total External Forces** **Fx** (body forward) | Combine with L, D via **Sum** / **Gain** into `[Fx, Fy, Fz]`, then **Mux** to the "Total External Forces" input |
+| **Q_p** (torque) | **Total External Moments** on the relevant axis (e.g. single propeller about spin axis) | For multiple propellers, sum/difference Q_p by rotation direction into roll/pitch/yaw; omit if not modelling moments yet |
 
-3. **Wire the inputs**  
-   - **Thrust_SIL** needs: `rho` (air density), `A` (rotor disk area), `v` (airspeed), `v_tip` (tip speed), `k1`, `k2`.  
-     - `v` can be computed from **Rigid Body Dynamics** “Body Velocities [u,v,w]” (e.g. sqrt(u^2+v^2+w^2)), or use a Constant for a fixed value when testing.  
-     - The rest can be Constants or from Workspace/other blocks.  
-   - **Lift_SIL / Drag_SIL** need: `rho`, `v`, `S` (wing area), `C_L` / `C_D` (coefficients; use Constant or lookup table).
+**Minimal wiring (thrust only):**
 
-4. **Connect formula outputs to rigid body dynamics**  
-   - Combine **Thrust_SIL** output `T`, **Lift_SIL** output `L`, and **Drag_SIL** output `D` in body axes into **Total External Forces [Fx, Fy, Fz]**:  
-     - e.g. thrust along body forward (x), lift/drag decomposed to x, z by pitch angle θ. Use **Gain**, **Sum**, **Mux** or a small **MATLAB Function** to convert T, L, D to `[Fx; Fy; Fz]`.  
-   - Use **Mux** to combine `Fx, Fy, Fz` into one vector and connect it to the “Total External Forces [x, y, z]” input; **disconnect** the original constant `[0 0 0]`.
+1. Copy **Thrust_SIL** into AM_SITL.
+2. Feed all six inputs with **Constant** blocks: rho=1.225, D=0.3, Omega_p=20, Va=15, k1=0.1, k2=0.02.
+3. Use **Gain** so T_p is the body-x force (e.g. +1 forward): Fx = T_p, Fy = 0, Fz = 0.
+4. **Mux** Fx, Fy, Fz into one 3-vector and connect to **Rigid Body Dynamics** "Total External Forces" input; disconnect the original `[0 0 0]`.
 
-5. **Moments (optional)**  
-   - If using **PID_Attitude_SIL** for attitude control, its output `u` can be treated as actuator/moment commands; use a mapping block to get “Total External Moments [m, n, l]”, connect to **Rigid Body Dynamics** moment input, and disconnect the original constant `[0 0 0]`.
-
-6. **Run the simulation**  
-   Set Stop Time, then click **Run**. Use Scope/Display to check that angular rates, attitude, position, etc. look reasonable; then tune `k1`, `k2`, `C_L`, `C_D`, and PID gains as needed.
+Thrust is then wired; add **Torque_SIL** output Q_p to "Total External Moments" when modelling propeller torque.
