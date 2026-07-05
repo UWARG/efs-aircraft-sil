@@ -20,5 +20,8 @@ classdef LateralCoeffs
         Cn_r = -0.095;
         Cn_da = -0.011;
         Cn_dr = -0.069;
+
+        k1 = 0; % Change for propulsion subsystem to work!
+        k2 = 0; % Change for propulsion subsystem to work!
     end
 end

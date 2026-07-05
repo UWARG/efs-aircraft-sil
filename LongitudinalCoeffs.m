@@ -10,5 +10,7 @@ classdef LongitudinalCoeffs
         Cm_alpha = -2.74;
         Cm_q = -38.21;
         Cm_de = -0.99;
+        C_prop = 1.0;
+        M = 50;
     end
 end
