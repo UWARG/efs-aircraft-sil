@@ -39,3 +39,8 @@
 
 # debug information files
 *.dwo
+
+# MATLAB
+matlab/
+*.r2025b
+*.asv
