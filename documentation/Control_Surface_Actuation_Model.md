@@ -48,6 +48,8 @@ The above equation for the yaw angle rate also holds true in the presence of win
 ## Trim Conditions
 ### Defining a trim condition
 
+### Left for whoever's interested in doing this in the future!!!! :D
+
 
 
 
